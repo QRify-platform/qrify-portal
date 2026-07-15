@@ -39,7 +39,7 @@ jobs:
       - name: Configure AWS credentials
         uses: QRify-platform/github-actions/aws-oidc@main
         with:
-          aws-role-to-assume: ${{ vars.AWS_ECR_ROLE_TO_ASSUME }}
+          aws-role-to-assume: ${{ vars.AWS_ECR_ROLE_TO_ASSUME || 'arn:aws:iam::856096729725:role/QRifyECRPushRole' }}
           aws-region: us-east-2
 
       - name: Scaffold service
