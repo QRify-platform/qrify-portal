@@ -84,7 +84,7 @@ jobs:
 
           echo "Creating ${ORG}/${NAME} ..."
           gh repo create "${ORG}/${NAME}" \
-            --private \
+            --public \
             --description "$DESC_JSON" \
             --disable-wiki
 

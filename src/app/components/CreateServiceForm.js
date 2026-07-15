@@ -6,12 +6,12 @@ const STACKS = [
   {
     id: 'nodejs',
     label: 'Node.js',
-    blurb: 'Express API with health, Docker, and release workflows.',
+    blurb: 'Express · Docker · release',
   },
   {
     id: 'python',
     label: 'Python',
-    blurb: 'FastAPI service with health, Docker, and release workflows.',
+    blurb: 'FastAPI · Docker · release',
   },
 ];
 
@@ -62,16 +62,18 @@ export default function CreateServiceForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-8">
+    <form onSubmit={onSubmit} className="space-y-7">
       <div>
         <label
           htmlFor="service-name"
-          className="font-mono text-[11px] uppercase tracking-[0.18em] text-steel"
+          className="font-mono text-[11px] uppercase tracking-[0.18em] text-bone/45"
         >
           Service name
         </label>
-        <div className="mt-3 flex items-baseline gap-2 border-b border-soot/15 pb-2 focus-within:border-acid">
-          <span className="font-mono text-sm text-steel">QRify-platform/</span>
+        <div className="field-ring mt-3 flex items-baseline gap-2 border border-bone/15 bg-bone/[0.04] px-3 py-3">
+          <span className="shrink-0 font-mono text-xs text-bone/35">
+            QRify-platform/
+          </span>
           <input
             id="service-name"
             name="name"
@@ -80,16 +82,16 @@ export default function CreateServiceForm() {
             placeholder="payments-api"
             autoComplete="off"
             spellCheck={false}
-            className="w-full bg-transparent font-display text-2xl font-semibold tracking-[-0.03em] text-soot outline-none placeholder:text-soot/25 sm:text-3xl"
+            className="w-full min-w-0 bg-transparent font-display text-xl font-semibold tracking-[-0.03em] text-bone outline-none placeholder:text-bone/25"
           />
         </div>
       </div>
 
       <fieldset>
-        <legend className="font-mono text-[11px] uppercase tracking-[0.18em] text-steel">
+        <legend className="font-mono text-[11px] uppercase tracking-[0.18em] text-bone/45">
           Stack
         </legend>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="mt-3 grid grid-cols-2 gap-2">
           {STACKS.map((option) => {
             const selected = stack === option.id;
             return (
@@ -97,18 +99,18 @@ export default function CreateServiceForm() {
                 key={option.id}
                 type="button"
                 onClick={() => setStack(option.id)}
-                className={`border px-5 py-4 text-left transition-colors ${
+                className={`border px-4 py-3.5 text-left transition-colors duration-150 ${
                   selected
-                    ? 'border-soot bg-soot text-bone'
-                    : 'border-soot/15 bg-white/50 text-soot hover:border-soot/40'
+                    ? 'border-acid bg-acid text-soot'
+                    : 'border-bone/15 text-bone hover:border-bone/35'
                 }`}
               >
-                <span className="font-display text-lg font-semibold tracking-[-0.02em]">
+                <span className="font-display text-base font-semibold tracking-[-0.02em]">
                   {option.label}
                 </span>
                 <p
-                  className={`mt-2 text-sm leading-relaxed ${
-                    selected ? 'text-bone/70' : 'text-steel'
+                  className={`mt-1 text-xs leading-snug ${
+                    selected ? 'text-soot/65' : 'text-bone/40'
                   }`}
                 >
                   {option.blurb}
@@ -122,48 +124,51 @@ export default function CreateServiceForm() {
       <div>
         <label
           htmlFor="description"
-          className="font-mono text-[11px] uppercase tracking-[0.18em] text-steel"
+          className="font-mono text-[11px] uppercase tracking-[0.18em] text-bone/45"
         >
-          Description <span className="normal-case tracking-normal">(optional)</span>
+          Description{' '}
+          <span className="normal-case tracking-normal text-bone/30">
+            (optional)
+          </span>
         </label>
         <textarea
           id="description"
           name="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          rows={3}
+          rows={2}
           placeholder="What does this service do?"
-          className="mt-3 w-full resize-none border border-soot/15 bg-white/60 px-4 py-3 text-base text-soot outline-none transition-colors placeholder:text-soot/30 focus:border-acid"
+          className="field-ring mt-3 w-full resize-none border border-bone/15 bg-bone/[0.04] px-3 py-3 text-sm text-bone outline-none placeholder:text-bone/25"
         />
       </div>
 
       {error ? (
-        <p className="border border-soot/20 bg-white px-4 py-3 text-sm text-soot">
+        <p className="border border-acid/40 bg-bone/[0.04] px-3 py-2.5 text-sm text-bone">
           {error}
         </p>
       ) : null}
 
       {status === 'done' && result ? (
-        <div className="animate-rise border border-acid/40 bg-soot px-5 py-5 text-bone">
+        <div className="animate-rise border border-acid/40 px-4 py-4">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-acid">
             Scaffolding started
           </p>
-          <p className="mt-3 font-display text-xl font-semibold tracking-[-0.02em]">
+          <p className="mt-2 font-display text-lg font-semibold tracking-[-0.02em]">
             {result.repository}
           </p>
-          <p className="mt-2 text-sm leading-relaxed text-bone/70">
-            GitHub Actions is creating the repo from the {result.stack} template.
-            Watch the run, then add ECR + cluster-state when you are ready to deploy.
+          <p className="mt-2 text-sm leading-relaxed text-bone/55">
+            Actions is creating the {result.stack} template. Wire ECR +
+            cluster-state when you&apos;re ready to deploy.
           </p>
-          <div className="mt-5 flex flex-wrap gap-4">
+          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
             {result.runUrl ? (
               <a
                 href={result.runUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="font-mono text-[11px] uppercase tracking-[0.18em] text-acid underline-offset-4 hover:underline"
+                className="font-mono text-[11px] uppercase tracking-[0.16em] text-acid underline-offset-4 hover:underline"
               >
-                Open workflow run
+                Workflow run
               </a>
             ) : null}
             {result.repoUrl ? (
@@ -171,9 +176,9 @@ export default function CreateServiceForm() {
                 href={result.repoUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="font-mono text-[11px] uppercase tracking-[0.18em] text-bone/70 underline-offset-4 hover:text-bone hover:underline"
+                className="font-mono text-[11px] uppercase tracking-[0.16em] text-bone/45 underline-offset-4 hover:text-bone hover:underline"
               >
-                Open repository
+                Repository
               </a>
             ) : null}
           </div>
@@ -182,9 +187,11 @@ export default function CreateServiceForm() {
         <button
           type="submit"
           disabled={status === 'creating'}
-          className="group inline-flex items-center gap-3 bg-soot px-8 py-4 font-mono text-[11px] uppercase tracking-[0.2em] text-bone transition-colors hover:bg-acid hover:text-soot disabled:cursor-wait disabled:opacity-70"
+          className="group inline-flex w-full items-center justify-between gap-3 bg-bone px-6 py-4 font-mono text-[11px] uppercase tracking-[0.2em] text-soot transition-colors duration-150 hover:bg-acid disabled:cursor-wait disabled:opacity-70"
         >
-          {status === 'creating' ? 'Creating service' : 'Create service'}
+          <span>
+            {status === 'creating' ? 'Creating service…' : 'Create service'}
+          </span>
           <span
             className={`h-2 w-2 bg-acid transition-colors group-hover:bg-soot ${
               status === 'creating' ? 'animate-pulsebar origin-left' : ''

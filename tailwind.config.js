@@ -22,19 +22,20 @@ module.exports = {
       },
       keyframes: {
         rise: {
-          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '0%': { opacity: '0', transform: 'translateY(24px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         pulsebar: {
-          '0%, 100%': { transform: 'scaleX(0.35)', opacity: '0.5' },
+          '0%, 100%': { transform: 'scaleX(0.35)', opacity: '0.45' },
           '50%': { transform: 'scaleX(1)', opacity: '1' },
         },
       },
       animation: {
-        rise: 'rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both',
-        'rise-2': 'rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both',
-        'rise-3': 'rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both',
-        pulsebar: 'pulsebar 1.6s ease-in-out infinite',
+        rise: 'rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'rise-2': 'rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both',
+        'rise-3': 'rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both',
+        'rise-4': 'rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both',
+        pulsebar: 'pulsebar 1.5s ease-in-out infinite',
       },
     },
   },
