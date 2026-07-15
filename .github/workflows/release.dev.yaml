@@ -16,14 +16,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Temporary: show exact JWT claims so we can match IAM trust `sub`
+      - name: Print OIDC claims
+        run: |
+          set -euo pipefail
+          TOKEN=$(curl -sS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r '.value')
+          BODY=$(echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+')
+          PAD=$(( (4 - ${#BODY} % 4) % 4 ))
+          BODY="${BODY}$(printf '=%.0s' $(seq 1 $PAD))"
+          echo "$BODY" | base64 -d 2>/dev/null | jq '{sub,aud,iss,repository,repository_owner,job_workflow_ref,ref,actor}'
+
       - name: Build and push Dev image
         id: build
         uses: QRify-platform/github-actions/docker-build-push@main
         with:
           image-name: qrify-portal-dev
-          aws-role-to-assume: ${{ vars.AWS_ECR_ROLE_TO_ASSUME || 'arn:aws:iam::856096729725:role/QRifyECRPushRole' }}
+          aws-role-to-assume: arn:aws:iam::856096729725:role/QRifyECRPushRole
           aws-region: us-east-2
-          ecr-registry: ${{ vars.AWS_ECR_REGISTRY || '856096729725.dkr.ecr.us-east-2.amazonaws.com' }}
+          ecr-registry: 856096729725.dkr.ecr.us-east-2.amazonaws.com
 
       - name: Update image tag in cluster-state
         uses: QRify-platform/github-actions/update-app-tag@main
