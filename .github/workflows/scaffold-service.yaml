@@ -156,22 +156,22 @@ jobs:
             if grep -qE "^- name: ${NAME}\$" "$VALUES"; then
               echo "app-of-apps already lists ${NAME}"
             else
-              cat >> "$VALUES" <<EOF
-
-  - name: ${NAME}
-    env: dev
-    namespace: dev
-    valuesFiles:
-      - values.yaml
-      - values.dev.yaml
-
-  - name: ${NAME}
-    env: prod
-    namespace: prod
-    valuesFiles:
-      - values.yaml
-      - values.prod.yaml
-EOF
+              {
+                echo ""
+                echo "  - name: ${NAME}"
+                echo "    env: dev"
+                echo "    namespace: dev"
+                echo "    valuesFiles:"
+                echo "      - values.yaml"
+                echo "      - values.dev.yaml"
+                echo ""
+                echo "  - name: ${NAME}"
+                echo "    env: prod"
+                echo "    namespace: prod"
+                echo "    valuesFiles:"
+                echo "      - values.yaml"
+                echo "      - values.prod.yaml"
+              } >> "$VALUES"
             fi
 
             (
