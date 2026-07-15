@@ -1,0 +1,46 @@
+qrify-base:
+
+  name: {{SERVICE_NAME}}
+  deployment: true
+  replicaCount: 1
+  ecrRegistry: "856096729725.dkr.ecr.us-east-2.amazonaws.com"
+
+  serviceAccount:
+    create: false
+
+  image:
+    pullPolicy: IfNotPresent
+
+  rollout:
+    enabled: true
+    activeService: {{SERVICE_NAME}}-active
+    previewService: {{SERVICE_NAME}}-preview
+    autoPromotionEnabled: true
+
+  service:
+    type: ClusterIP
+    port: {{SERVICE_PORT}}
+    targetPort: {{SERVICE_PORT}}
+
+  # Host ingress left off by default (add SAN / DNS when ready).
+  ingress:
+    enabled: false
+    className: "nginx"
+    annotations: {}
+    hosts: []
+    tls: []
+
+  metrics:
+    enabled: false
+
+  env: []
+
+  resources: {}
+
+  livenessProbe: {}
+  readinessProbe:
+    httpGet:
+      path: {{HEALTH_PATH}}
+      port: {{SERVICE_PORT}}
+    initialDelaySeconds: 5
+    periodSeconds: 5

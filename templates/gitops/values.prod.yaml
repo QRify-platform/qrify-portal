@@ -1,0 +1,15 @@
+qrify-base:
+  environment: prod
+  imageTag: pending
+
+  replicaCount: 2
+
+  rollout:
+    autoPromotionEnabled: false
+
+  labels:
+    app.kubernetes.io/instance: {{SERVICE_NAME}}-prod
+    app.kubernetes.io/name: {{SERVICE_NAME}}-prod
+  podLabels:
+    app.kubernetes.io/instance: {{SERVICE_NAME}}-prod
+    app.kubernetes.io/name: {{SERVICE_NAME}}-prod

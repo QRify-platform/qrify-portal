@@ -157,8 +157,8 @@ export default function CreateServiceForm() {
             {result.repository}
           </p>
           <p className="mt-2 text-sm leading-relaxed text-bone/55">
-            Actions is creating the {result.stack} template. Wire ECR +
-            cluster-state when you&apos;re ready to deploy.
+            Provisioned GitHub + ECR + cluster-state. Release Dev will build the
+            first image and bump the GitOps tag.
           </p>
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
             {result.runUrl ? (

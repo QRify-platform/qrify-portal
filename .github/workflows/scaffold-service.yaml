@@ -1,7 +1,9 @@
 name: Scaffold Service
 
-# Dispatched by the portal UI (/api/services). Creates a new org repo from a
-# Node or Python template under templates/.
+# Full platform onboard:
+# 1) GitHub app repo from template
+# 2) ECR {name}-dev / {name}-prod
+# 3) cluster-state Helm app + app-of-apps entries
 
 on:
   workflow_dispatch:
@@ -24,7 +26,8 @@ on:
         default: ''
 
 permissions:
-  contents: write
+  id-token: write
+  contents: read
 
 jobs:
   scaffold:
@@ -33,18 +36,25 @@ jobs:
       - name: Checkout portal (templates)
         uses: actions/checkout@v4
 
-      - name: Create repository from template
+      - name: Configure AWS credentials
+        uses: QRify-platform/github-actions/aws-oidc@main
+        with:
+          aws-role-to-assume: ${{ vars.AWS_ECR_ROLE_TO_ASSUME }}
+          aws-region: us-east-2
+
+      - name: Scaffold service
         env:
           GH_TOKEN: ${{ secrets.SCAFFOLD_GITHUB_TOKEN }}
           ORG: QRify-platform
           NAME: ${{ inputs.name }}
           STACK: ${{ inputs.stack }}
           DESCRIPTION: ${{ inputs.description }}
+          AWS_REGION: us-east-2
         run: |
           set -euo pipefail
 
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "Missing secret SCAFFOLD_GITHUB_TOKEN (needs repo create + contents)."
+            echo "Missing secret SCAFFOLD_GITHUB_TOKEN"
             exit 1
           fi
 
@@ -54,47 +64,125 @@ jobs:
           fi
 
           case "$STACK" in
-            nodejs|python) ;;
-            *) echo "Invalid stack: $STACK"; exit 1 ;;
+            nodejs)
+              SERVICE_PORT=3000
+              HEALTH_PATH=/health
+              ;;
+            python)
+              SERVICE_PORT=8000
+              HEALTH_PATH=/health
+              ;;
+            *)
+              echo "Invalid stack: $STACK"
+              exit 1
+              ;;
           esac
 
-          WORK=$(mktemp -d)
-          TEMPLATE="templates/${STACK}"
-          SHARED="templates/README.md"
-
-          cp -R "$TEMPLATE/." "$WORK/"
-          if [ -f "$SHARED" ]; then
-            cp "$SHARED" "$WORK/README.md"
-          fi
+          replace_placeholders() {
+            local root="$1"
+            while IFS= read -r -d '' file; do
+              sed -i \
+                -e "s/{{SERVICE_NAME}}/${NAME}/g" \
+                -e "s/{{DESCRIPTION}}/${DESC_ESCAPED}/g" \
+                -e "s/{{SERVICE_PORT}}/${SERVICE_PORT}/g" \
+                -e "s|{{HEALTH_PATH}}|${HEALTH_PATH}|g" \
+                "$file"
+            done < <(find "$root" -type f -print0)
+          }
 
           DESC_ESCAPED=$(printf '%s' "$DESCRIPTION" | sed 's/[&/\]/\\&/g')
-          # Replace placeholders in all text files
-          while IFS= read -r -d '' file; do
-            sed -i \
-              -e "s/{{SERVICE_NAME}}/${NAME}/g" \
-              -e "s/{{DESCRIPTION}}/${DESC_ESCAPED}/g" \
-              "$file"
-          done < <(find "$WORK" -type f -print0)
-
           if [ -z "$DESCRIPTION" ]; then
             DESC_JSON="Service scaffolded by QRify Portal (${STACK})"
           else
             DESC_JSON="$DESCRIPTION"
           fi
 
-          echo "Creating ${ORG}/${NAME} ..."
+          # --- ECR ---
+          for repo in "${NAME}-dev" "${NAME}-prod"; do
+            if aws ecr describe-repositories --repository-names "$repo" --region "$AWS_REGION" >/dev/null 2>&1; then
+              echo "ECR exists: $repo"
+            else
+              echo "Creating ECR: $repo"
+              aws ecr create-repository \
+                --repository-name "$repo" \
+                --region "$AWS_REGION" \
+                --image-scanning-configuration scanOnPush=true \
+                --tags Key=Project,Value=QRify Key=ManagedBy,Value=QRifyPortal
+            fi
+          done
+
+          # --- GitHub app repo ---
+          WORK=$(mktemp -d)
+          cp -R "templates/${STACK}/." "$WORK/"
+          cp templates/README.md "$WORK/README.md"
+          replace_placeholders "$WORK"
+
+          echo "Creating ${ORG}/${NAME} (public) ..."
           gh repo create "${ORG}/${NAME}" \
             --public \
             --description "$DESC_JSON" \
             --disable-wiki
 
-          cd "$WORK"
-          git init -b main
-          git config user.email "portal-bot@qrify-web.com"
-          git config user.name "QRify Portal"
-          git add .
-          git commit -m "Scaffold ${NAME} (${STACK}) from QRify Portal"
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${ORG}/${NAME}.git"
-          git push -u origin main
-
+          (
+            cd "$WORK"
+            git init -b main
+            git config user.email "portal-bot@qrify-web.com"
+            git config user.name "QRify Portal"
+            git add .
+            git commit -m "Scaffold ${NAME} (${STACK}) from QRify Portal"
+            git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${ORG}/${NAME}.git"
+            git push -u origin main
+          )
           echo "Created https://github.com/${ORG}/${NAME}"
+
+          # --- cluster-state GitOps ---
+          CS=$(mktemp -d)
+          git clone --depth 1 \
+            "https://x-access-token:${GH_TOKEN}@github.com/${ORG}/cluster-state.git" \
+            "$CS"
+
+          APP_DIR="$CS/apps/${NAME}"
+          if [ -d "$APP_DIR" ]; then
+            echo "cluster-state already has apps/${NAME} — leaving as-is"
+          else
+            mkdir -p "$APP_DIR"
+            cp templates/gitops/Chart.yaml "$APP_DIR/"
+            cp templates/gitops/values.yaml "$APP_DIR/"
+            cp templates/gitops/values.dev.yaml "$APP_DIR/"
+            cp templates/gitops/values.prod.yaml "$APP_DIR/"
+            replace_placeholders "$APP_DIR"
+
+            VALUES="$CS/app-of-apps/values.yaml"
+            if grep -qE "^- name: ${NAME}\$" "$VALUES"; then
+              echo "app-of-apps already lists ${NAME}"
+            else
+              cat >> "$VALUES" <<EOF
+
+  - name: ${NAME}
+    env: dev
+    namespace: dev
+    valuesFiles:
+      - values.yaml
+      - values.dev.yaml
+
+  - name: ${NAME}
+    env: prod
+    namespace: prod
+    valuesFiles:
+      - values.yaml
+      - values.prod.yaml
+EOF
+            fi
+
+            (
+              cd "$CS"
+              git config user.email "portal-bot@qrify-web.com"
+              git config user.name "QRify Portal"
+              git add "apps/${NAME}" app-of-apps/values.yaml
+              git commit -m "Add ${NAME} app (scaffolded by QRify Portal)"
+              git push origin HEAD:main
+            )
+            echo "Updated cluster-state apps/${NAME} + app-of-apps"
+          fi
+
+          echo "::notice::Scaffold complete for ${ORG}/${NAME}. Release Dev will push the first image and bump the GitOps tag."

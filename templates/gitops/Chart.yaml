@@ -1,0 +1,9 @@
+apiVersion: v2
+name: {{SERVICE_NAME}}
+description: Helm chart for {{SERVICE_NAME}} (scaffolded by QRify Portal)
+type: application
+version: 0.0.1
+dependencies:
+  - name: qrify-base
+    version: 0.0.19
+    repository: https://Qrify-platform.github.io/helm-charts
