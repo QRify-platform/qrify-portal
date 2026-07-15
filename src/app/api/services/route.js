@@ -72,17 +72,17 @@ export async function POST(request) {
     );
   }
 
-  // Resolve workflow by path/name first — file-name URLs often 404 with fine-grained PATs
-  // when the token can't list workflows (GitHub masks that as Not Found).
+  // Resolve the active scaffold workflow, then dispatch by file path (more
+  // reliable than a stale workflow id after file rewrites).
   const listRes = await fetch(
-    `https://api.github.com/repos/${scaffoldRepo}/actions/workflows`,
+    `https://api.github.com/repos/${scaffoldRepo}/actions/workflows?per_page=100`,
     { headers: ghHeaders(token), cache: 'no-store' },
   );
   if (!listRes.ok) {
     const text = await listRes.text();
     return NextResponse.json(
       {
-        error: `Cannot list workflows on ${scaffoldRepo} (${listRes.status}). Check PAT: repo access to portal + Actions Read/Write. ${text.slice(0, 200)}`,
+        error: `Cannot list workflows on ${scaffoldRepo} (${listRes.status}). Check PAT: repo access to qrify-portal + Actions Read/Write. ${text.slice(0, 200)}`,
       },
       { status: 502 },
     );
@@ -91,23 +91,26 @@ export async function POST(request) {
   const listed = await listRes.json();
   const match = (listed.workflows || []).find(
     (w) =>
-      w.path === `.github/workflows/${workflowFile}` ||
-      w.path?.endsWith(`/${workflowFile}`) ||
-      w.name === 'Scaffold Service',
+      w.state === 'active' &&
+      (w.path === `.github/workflows/${workflowFile}` ||
+        w.path?.endsWith(`/${workflowFile}`)),
   );
 
   if (!match) {
-    const names = (listed.workflows || []).map((w) => w.path).join(', ');
+    const names = (listed.workflows || [])
+      .map((w) => `${w.path}[${w.state}]`)
+      .join(', ');
     return NextResponse.json(
       {
-        error: `Workflow ${workflowFile} not found on ${scaffoldRepo}. Seen: ${names || '(none)'}`,
+        error: `Active workflow ${workflowFile} not found on ${scaffoldRepo}. Seen: ${names || '(none)'}. Push scaffold-service.yaml to main if missing.`,
       },
       { status: 502 },
     );
   }
 
+  const workflowPath = encodeURIComponent(match.path);
   const dispatchRes = await fetch(
-    `https://api.github.com/repos/${scaffoldRepo}/actions/workflows/${match.id}/dispatches`,
+    `https://api.github.com/repos/${scaffoldRepo}/actions/workflows/${workflowPath}/dispatches`,
     {
       method: 'POST',
       headers: {
@@ -119,7 +122,7 @@ export async function POST(request) {
         inputs: {
           name,
           stack,
-          description,
+          description: description || '',
         },
       }),
     },
