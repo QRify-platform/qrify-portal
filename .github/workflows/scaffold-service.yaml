@@ -1,0 +1,100 @@
+name: Scaffold Service
+
+# Dispatched by the portal UI (/api/services). Creates a new org repo from a
+# Node or Python template under templates/.
+
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: Service / repo name (kebab-case)
+        required: true
+        type: string
+      stack:
+        description: nodejs or python
+        required: true
+        type: choice
+        options:
+          - nodejs
+          - python
+      description:
+        description: Short repo description
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout portal (templates)
+        uses: actions/checkout@v4
+
+      - name: Create repository from template
+        env:
+          GH_TOKEN: ${{ secrets.SCAFFOLD_GITHUB_TOKEN }}
+          ORG: QRify-platform
+          NAME: ${{ inputs.name }}
+          STACK: ${{ inputs.stack }}
+          DESCRIPTION: ${{ inputs.description }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "Missing secret SCAFFOLD_GITHUB_TOKEN (needs repo create + contents)."
+            exit 1
+          fi
+
+          if [[ ! "$NAME" =~ ^[a-z][a-z0-9-]{1,38}[a-z0-9]$ ]]; then
+            echo "Invalid name: $NAME"
+            exit 1
+          fi
+
+          case "$STACK" in
+            nodejs|python) ;;
+            *) echo "Invalid stack: $STACK"; exit 1 ;;
+          esac
+
+          WORK=$(mktemp -d)
+          TEMPLATE="templates/${STACK}"
+          SHARED="templates/README.md"
+
+          cp -R "$TEMPLATE/." "$WORK/"
+          if [ -f "$SHARED" ]; then
+            cp "$SHARED" "$WORK/README.md"
+          fi
+
+          DESC_ESCAPED=$(printf '%s' "$DESCRIPTION" | sed 's/[&/\]/\\&/g')
+          # Replace placeholders in all text files
+          while IFS= read -r -d '' file; do
+            sed -i \
+              -e "s/{{SERVICE_NAME}}/${NAME}/g" \
+              -e "s/{{DESCRIPTION}}/${DESC_ESCAPED}/g" \
+              "$file"
+          done < <(find "$WORK" -type f -print0)
+
+          if [ -z "$DESCRIPTION" ]; then
+            DESC_JSON="Service scaffolded by QRify Portal (${STACK})"
+          else
+            DESC_JSON="$DESCRIPTION"
+          fi
+
+          echo "Creating ${ORG}/${NAME} ..."
+          gh repo create "${ORG}/${NAME}" \
+            --private \
+            --description "$DESC_JSON" \
+            --disable-wiki
+
+          cd "$WORK"
+          git init -b main
+          git config user.email "portal-bot@qrify-web.com"
+          git config user.name "QRify Portal"
+          git add .
+          git commit -m "Scaffold ${NAME} (${STACK}) from QRify Portal"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${ORG}/${NAME}.git"
+          git push -u origin main
+
+          echo "Created https://github.com/${ORG}/${NAME}"
