@@ -24,7 +24,7 @@ export SCAFFOLD_REPO=QRify-platform/qrify-portal
 
 1. UI posts to `/api/services`
 2. API dispatches `.github/workflows/scaffold-service.yaml`
-3. Workflow creates:
+3. Workflow runs `scripts/scaffold-service.sh`, which creates:
    - public `QRify-platform/<name>` from `templates/{nodejs,python}`
    - ECR `<name>-dev` / `<name>-prod`
    - `cluster-state` Helm app + app-of-apps entries
