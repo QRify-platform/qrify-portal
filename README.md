@@ -47,7 +47,7 @@ Scaffold creates **public** repos so they can use:
 | `CLUSTER_STATE_PAT` | update-app-tag |
 | `SCAFFOLD_GITHUB_TOKEN` | scaffold-service (create repos) |
 
-Runtime (cluster) needs `GITHUB_TOKEN` / `SCAFFOLD_GITHUB_TOKEN` so the pod can dispatch scaffolds — store as a SealedSecret later.
+Runtime (cluster) needs `GITHUB_TOKEN` / `SCAFFOLD_GITHUB_TOKEN` so the pod can dispatch scaffolds — store via secrets-manager (SOPS → Secrets Manager → External Secrets).
 
 ## Platform wiring
 
