@@ -85,6 +85,41 @@ ensure_ecr() {
 ensure_ecr "${NAME}-dev"
 ensure_ecr "${NAME}-prod"
 
+# --- GitHub production environment (required reviewers) ---------------------
+# New app repos get environment "production" with required reviewers so
+# release.yaml promote-prod waits for approval. Override via org vars:
+#   PROD_REVIEWER_LOGIN  — GitHub username (default: token user / bryanpow)
+#   PROD_REVIEWER_TEAM   — org team slug (optional; used instead of user if set)
+
+ensure_production_environment() {
+  local reviewer_json reviewer_id login team_slug
+
+  team_slug="${PROD_REVIEWER_TEAM:-}"
+  if [ -n "$team_slug" ]; then
+    reviewer_id="$(gh api "/orgs/${ORG}/teams/${team_slug}" --jq .id)"
+    reviewer_json="$(printf '{"type":"Team","id":%s}' "$reviewer_id")"
+    echo "production reviewers: team ${ORG}/${team_slug} (${reviewer_id})"
+  else
+    login="${PROD_REVIEWER_LOGIN:-}"
+    if [ -z "$login" ]; then
+      login="$(gh api user --jq .login)"
+    fi
+    reviewer_id="$(gh api "/users/${login}" --jq .id)"
+    reviewer_json="$(printf '{"type":"User","id":%s}' "$reviewer_id")"
+    echo "production reviewers: user ${login} (${reviewer_id})"
+  fi
+
+  gh api --method PUT \
+    "/repos/${ORG}/${NAME}/environments/production" \
+    --input - >/dev/null <<EOF
+{
+  "prevent_self_review": false,
+  "reviewers": [${reviewer_json}]
+}
+EOF
+  echo "Configured ${ORG}/${NAME} environment production with required reviewers"
+}
+
 # --- GitHub app repo --------------------------------------------------------
 
 create_app_repo() {
@@ -122,6 +157,7 @@ create_app_repo() {
 }
 
 create_app_repo
+ensure_production_environment
 
 # --- cluster-state GitOps ---------------------------------------------------
 

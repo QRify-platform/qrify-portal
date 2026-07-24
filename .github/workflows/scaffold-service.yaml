@@ -54,4 +54,7 @@ jobs:
           STACK: ${{ inputs.stack }}
           DESCRIPTION: ${{ inputs.description }}
           AWS_REGION: ${{ vars.AWS_REGION || 'us-east-2' }}
+          # Required reviewers on the new repo's "production" environment
+          PROD_REVIEWER_LOGIN: ${{ vars.PROD_REVIEWER_LOGIN || 'bryanpow' }}
+          PROD_REVIEWER_TEAM: ${{ vars.PROD_REVIEWER_TEAM || '' }}
         run: bash scripts/scaffold-service.sh

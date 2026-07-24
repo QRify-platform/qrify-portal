@@ -27,8 +27,9 @@ export SCAFFOLD_REPO=QRify-platform/qrify-portal
 3. Workflow runs `scripts/scaffold-service.sh`, which creates:
    - public `QRify-platform/<name>` from `templates/{nodejs,python}`
    - ECR `<name>-dev` / `<name>-prod`
+   - GitHub Environment **production** with required reviewers (prod promote waits for approval)
    - `cluster-state` Helm app + app-of-apps entries
-4. First push Release Dev builds the image and bumps `values.dev.yaml`
+4. First push Release builds the image, bumps `values.dev.yaml`, then waits for production approval before promoting
 
 ## GitHub Actions config
 
@@ -39,6 +40,8 @@ Scaffold creates **public** repos so they can use:
 |---|---|
 | `AWS_ECR_ROLE_TO_ASSUME` | `arn:aws:iam::856096729725:role/QRifyECRPushRole` |
 | `AWS_ECR_REGISTRY` | `856096729725.dkr.ecr.us-east-2.amazonaws.com` |
+| `PROD_REVIEWER_LOGIN` | `bryanpow` (required reviewer on new repos' `production` env) |
+| `PROD_REVIEWER_TEAM` | optional org team slug instead of a user |
 
 **Secrets** (actual credentials):
 
