@@ -6,9 +6,10 @@ Scaffolded by **QRify Portal**.
 
 ## What was provisioned
 
-- Public GitHub repo with Docker + release workflows
+- Public GitHub repo with Docker + a single `release.yaml` (build → dev, promote same tag → prod)
 - ECR repositories `{{SERVICE_NAME}}-dev` and `{{SERVICE_NAME}}-prod`
 - `cluster-state` Helm chart under `apps/{{SERVICE_NAME}}` (dev + prod app-of-apps)
+- Configure required reviewers on the repo **production** GitHub Environment so promote waits for approval
 
 ## Local
 
